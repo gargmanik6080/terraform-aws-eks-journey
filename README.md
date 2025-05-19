@@ -1,6 +1,6 @@
-# Terraform Journey for Beginners
+# Terraform AWS EKS Journey
 
-My evolving Terraform practice repository — from basics to real-world infrastructure. Open for all to learn and contribute.
+Infrastructure as Code journey with Terraform, focusing on AWS EKS (Elastic Kubernetes Service) deployment and management. From basic EC2 instances to production-ready Kubernetes clusters using Terraform and eksctl approaches.
 
 ## Project Structure
 
@@ -12,6 +12,11 @@ My evolving Terraform practice repository — from basics to real-world infrastr
    - Complete VPC setup with custom subnet
    - Security Group configuration
    - EC2 instance in the custom VPC
+
+3. **EKS Cluster** (`3. Basic EKS Cluster/`)
+   - Simple EKS cluster setup using eksctl
+   - Basic node group configuration
+   - Foundation for future Kubernetes deployments
 
 ## Prerequisites
 
@@ -56,6 +61,57 @@ When prompted, type `yes` to confirm the destruction of resources.
 - The security group in the VPC example needs to be configured with proper ingress/egress rules
 - Always follow the principle of least privilege when configuring security groups
 - Keep your AWS credentials secure and never commit them to the repository
+
+## EKS Cluster Setup
+
+### Prerequisites for EKS
+1. Install eksctl:
+   ```bash
+   # For macOS with Homebrew
+   brew install eksctl
+   ```
+
+2. Install kubectl:
+   ```bash
+   # For macOS with Homebrew
+   brew install kubectl
+   ```
+
+3. Verify installations:
+   ```bash
+   eksctl version
+   kubectl version --client
+   ```
+
+### Create Basic EKS Cluster
+1. Create a basic cluster (this may take 15-20 minutes):
+   ```bash
+   eksctl create cluster \
+     --name my-eks-cluster \
+     --region us-west-2 \
+     --nodegroup-name my-nodes \
+     --node-type t3.medium \     # You can also use t2.medium. Note: m3.medium is deprecated
+     --nodes 2 \
+     --nodes-min 1 \
+     --nodes-max 3
+   ```
+
+   **Note about instance types:**
+   - `t3.medium` is recommended (newer, better performance)
+   - `t2.medium` is a viable alternative
+   - Avoid `m3` instances as they are older generation
+   - Each node needs at least 2 vCPUs and 4GB RAM for Kubernetes components
+
+2. Verify cluster creation:
+   ```bash
+   kubectl get nodes
+   ```
+
+### Delete EKS Cluster
+When you're done experimenting, delete the cluster to avoid charges:
+```bash
+eksctl delete cluster --name my-eks-cluster --region us-west-2
+```
 
 ## Contributing
 
