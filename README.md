@@ -13,7 +13,7 @@ Infrastructure as Code journey with Terraform, focusing on AWS EKS (Elastic Kube
    - Security Group configuration
    - EC2 instance in the custom VPC
 
-3. **EKS Cluster** (`3. Basic EKS Cluster/`)
+3. **EKS Cluster**
    - Simple EKS cluster setup using eksctl
    - Basic node group configuration
    - Foundation for future Kubernetes deployments
