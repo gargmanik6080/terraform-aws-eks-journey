@@ -113,6 +113,114 @@ When you're done experimenting, delete the cluster to avoid charges:
 eksctl delete cluster --name my-eks-cluster --region us-west-2
 ```
 
+## Kops Cluster Setup
+
+### ⚠️ Plot Twist: This Didn't Work! 
+
+**TL;DR:** Tried to use kops in O'Reilly's AWS Sandbox. Turns out sandbox environments are called "sandbox" for a reason - they don't let you build castles (or Kubernetes clusters) in them! 🏰❌
+
+**The Comedy of Errors:**
+- kops: "Hey, can I create some VPCs?"
+- AWS Sandbox: "Nope! 🙅‍♂️"
+- kops: "How about some IAM roles?"
+- AWS Sandbox: "Still nope! 🚫"
+- kops: "Can I at least create a tiny EC2 instance?"
+- AWS Sandbox: "Did I stutter? NOPE! 💀"
+
+**What kops actually needs (and sandbox won't give):**
+- VPC creation/modification (denied faster than a bad Tinder profile)
+- EC2 instance management (sandbox said "not today, Satan")
+- Auto Scaling Groups (apparently too dangerous for us mortals)
+- Load Balancer creation (because load balancers are scary)
+- IAM role creation (sandbox guards these like dragon treasure)
+- Route53 DNS management (because DNS is apparently classified information)
+
+**Lessons learned:**
+1. Sandbox environments are great for learning... until they're not 😅
+2. kops is like that friend who needs to borrow EVERYTHING to help you move
+3. Always check IAM permissions before getting your hopes up
+
+**What actually works in sandbox environments:**
+- Crying softly 😢
+- Learning to appreciate managed services like EKS
+- Realizing why companies pay for real AWS accounts
+
+### Prerequisites for Kops (If You Have Real AWS Access)
+1. Install kops:
+   ```bash
+   brew install kops
+   ```
+
+2. Create an S3 bucket for state store:
+   ```bash
+   # Create the bucket (if your IAM gods smile upon you)
+   aws s3api create-bucket \
+       --bucket my-test-cluster-state-store \
+       --region us-west-2 \
+       --create-bucket-configuration LocationConstraint=us-west-2
+
+   # Enable versioning (crossing fingers this works)
+   aws s3api put-bucket-versioning \
+       --bucket my-test-cluster-state-store \
+       --versioning-configuration Status=Enabled
+   ```
+
+3. Set environment variables (assuming you made it this far without IAM errors):
+   ```bash
+   export KOPS_STATE_STORE=s3://my-test-cluster-state-store
+   export KOPS_CLUSTER_NAME=my-test-cluster.k8s.local
+   ```
+
+### Deploy Kops Cluster (Theoretical Instructions)
+**Disclaimer:** These steps are provided for educational purposes and nostalgia. They work great... if you're not in a sandbox! 🎭
+
+1. Create the cluster configuration:
+   ```bash
+   kops create -f cluster.tmpl.yaml
+   # 50/50 chance this will work in your environment
+   ```
+
+2. Create cluster secret:
+   ```bash
+   kops create secret --name ${KOPS_CLUSTER_NAME} sshpublickey admin -i ~/.ssh/id_rsa.pub
+   # If this fails, blame the IAM permissions, not your SSH keys
+   ```
+
+3. Review the cluster configuration (this part usually works):
+   ```bash
+   kops get cluster
+   kops get ig
+   # At least you can see what WOULD have been created! 🤷‍♂️
+   ```
+
+4. Deploy the cluster (where dreams go to die):
+   ```bash
+   kops update cluster --name ${KOPS_CLUSTER_NAME} --yes
+   # *narrator voice*: "It was at this moment, they knew... they messed up"
+   ```
+
+5. Wait for the cluster to be ready (or wait for error messages):
+   ```bash
+   kops validate cluster --wait 10m
+   # Spoiler alert: It won't validate in a sandbox 💔
+   ```
+
+6. Verify cluster (optimistic much?):
+   ```bash
+   kubectl get nodes
+   # "No resources found" - the story of my kops life
+   ```
+
+### Delete Kops Cluster (The Only Command That Might Work)
+To delete the cluster when you're done (or when it never worked in the first place):
+```bash
+kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
+# Finally! A command that works in sandbox environments 🎉
+# Because deleting nothing is apparently always allowed
+```
+
+**Pro Tip:** If you want to actually create a Kubernetes cluster in a restricted environment, stick with EKS using eksctl. It's like kops's more responsible sibling who actually gets invited to the AWS family dinner. 🍽️
+
 ## Contributing
 
 Feel free to contribute by:
