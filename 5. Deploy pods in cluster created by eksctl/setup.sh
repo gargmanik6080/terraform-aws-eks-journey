@@ -4,7 +4,7 @@ eksctl create cluster \
   --name my-test-cluster \
   --region us-west-2 \
   --nodes 5 \
-  --node-type m3.micro \
+  --node-type m3.medium \
   --managed
 
 k apply -f frontend.yaml
