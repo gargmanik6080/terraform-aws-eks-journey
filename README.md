@@ -13,16 +13,26 @@ Infrastructure as Code journey with Terraform, focusing on AWS EKS (Elastic Kube
    - Security Group configuration
    - EC2 instance in the custom VPC
 
-3. **EKS Cluster**
-   - Simple EKS cluster setup using eksctl
-   - Basic node group configuration
-   - Foundation for future Kubernetes deployments
+3. **Kops Cluster Setup** (`4. Create a cluster using kops/`)
+   - Kubernetes cluster creation using kops
+   - Includes production environment setup
+   - Note: Requires full AWS permissions (doesn't work in sandbox environments)
+
+4. **EKS Pod Deployment** (`5. Deploy pods in cluster created by eksctl/`)
+   - Create EKS cluster using eksctl
+   - Deploy containerized frontend and backend applications
+   - Kubernetes services and pod management
+   - Port forwarding and testing strategies
+   - Comprehensive guide for containerizing your own applications
 
 ## Prerequisites
 
 1. Install [Terraform](https://developer.hashicorp.com/terraform/downloads)
 2. Configure [AWS CLI](https://aws.amazon.com/cli/) with your credentials
-3. Basic understanding of AWS services (VPC, EC2, Security Groups)
+3. Install [eksctl](https://eksctl.io/installation/) for EKS cluster management
+4. Install [kubectl](https://kubernetes.io/docs/tasks/tools/) for Kubernetes operations
+5. Basic understanding of AWS services (VPC, EC2, Security Groups)
+6. Docker for containerizing applications
 
 ## Usage Instructions
 
@@ -54,7 +64,9 @@ When prompted, type `yes` to confirm the destruction of resources.
 - Always review the plan before applying changes
 - Remember to destroy resources when done to avoid unnecessary charges
 - The configurations use `us-west-2` (Oregon) region by default
-- All instances are `t2.micro` (Free tier eligible)
+- EC2 instances are `t2.micro` (Free tier eligible) for basic exercises
+- EKS clusters incur charges per hour - clean up when not in use
+- Each exercise should be run with a fresh cluster to avoid configuration drift and conflicts
 
 ## Security Considerations
 
