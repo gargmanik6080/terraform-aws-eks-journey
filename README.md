@@ -223,13 +223,34 @@ eksctl delete cluster --name my-eks-cluster --region us-west-2
    # "No resources found" - the story of my kops life
    ```
 
-### Delete Kops Cluster (The Only Command That Might Work)
-To delete the cluster when you're done (or when it never worked in the first place):
+### Delete Kops Cluster (The Real Horror Story!)
+To delete the cluster when you're done:
 ```bash
 kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
-# Finally! A command that works in sandbox environments 🎉
-# Because deleting nothing is apparently always allowed
+# Plot twist: This doesn't work either! 💀
+# But the REAL problem? Resources ARE actually created!
 ```
+
+**The REAL Horror Story:** kops DID create AWS resources, but you can't manage them! 😱
+
+**What Actually Got Created (and is costing you money):**
+- ✅ VPC (running and billing)
+- ✅ Bastion host (EC2 instance running 24/7)
+- ✅ ELB (Load balancer charging per hour)
+- ✅ NAT Gateways (expensive data processing charges)
+- ❌ Worker nodes (couldn't launch from launch template due to permissions)
+
+**The Nightmare Scenario:**
+- Resources ARE created ✅ (costs accumulating)
+- But kops can't manage them ❌ (can't list, update, or delete)
+- Manual cleanup required through AWS Console 😰
+- Perfect recipe for bill shock! 💸
+
+**What the sandbox won't let you do:**
+- List kops resources ❌
+- Delete through kops ❌
+- Launch EC2 instances from launch templates ❌
+- Complete the cluster setup ❌
 
 **Pro Tip:** If you want to actually create a Kubernetes cluster in a restricted environment, stick with EKS using eksctl. It's like kops's more responsible sibling who actually gets invited to the AWS family dinner. 🍽️
 
