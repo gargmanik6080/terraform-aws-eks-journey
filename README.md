@@ -127,7 +127,7 @@ eksctl delete cluster --name my-eks-cluster --region us-west-2
 
 ## Kops Cluster Setup
 
-### ⚠️ Plot Twist: This Didn't Work! 
+### ⚠️ This Didn't Work! 
 
 **TL;DR:** Tried to use kops in O'Reilly's AWS Sandbox. Turns out sandbox environments are called "sandbox" for a reason - they don't let you build castles (or Kubernetes clusters) in them! 🏰❌
 
