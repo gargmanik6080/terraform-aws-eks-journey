@@ -9,7 +9,7 @@ metadata:
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
 spec:
   rules:
-    - host: your-app.example.com
+    - host: ec2-18-236-249-133.us-west-2.compute.amazonaws.com
       http:
         paths:
           - path: /
@@ -19,3 +19,11 @@ spec:
                 name: omnixo-frontend
                 port:
                   number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: omnixo-server
+                port:
+                  number: 3030
+
