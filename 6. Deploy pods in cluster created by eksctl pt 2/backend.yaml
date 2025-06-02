@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  containers:
+  - name: backend
+    image: gargmanik6080/server:latest
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 80
