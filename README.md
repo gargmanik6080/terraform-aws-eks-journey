@@ -25,6 +25,13 @@ Infrastructure as Code journey with Terraform, focusing on AWS EKS (Elastic Kube
    - Port forwarding and testing strategies
    - Comprehensive guide for containerizing your own applications
 
+5. **EKS with Load Balancer** (`6. Deploy pods in cluster created by eksctl pt 2/`)
+   - AWS Load Balancer Controller setup
+   - Application Load Balancer (ALB) ingress configuration
+   - Production-ready external access patterns
+   - IAM policy management for ALB permissions
+   - SSL/TLS and advanced routing capabilities
+
 ## Prerequisites
 
 1. Install [Terraform](https://developer.hashicorp.com/terraform/downloads)

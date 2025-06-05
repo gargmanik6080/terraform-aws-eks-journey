@@ -3,14 +3,33 @@ kind: Ingress
 metadata:
   name: frontend-ingress
   annotations:
-    ingressClassName: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    # alb.ingress.kubernetes.io/actions.api: |
+      # {
+      #   "Type": "forward",
+      #   "ForwardConfig": {
+      #     "TargetGroups": [
+      #       {
+      #         "ServiceName": "omnixo-server",
+      #         "ServicePort": "3030"
+      #       }
+      #     ]
+      #   },
+      #   "Conditions": [
+      #     {
+      #       "Field": "path-pattern",
+      #       "Values": ["/api/*"]
+      #     }
+      #   ]
+      #   # "RewritePath": "/"
+      # }
+
 spec:
+  ingressClassName: alb
   rules:
-    - host: ec2-18-236-249-133.us-west-2.compute.amazonaws.com
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
@@ -19,7 +38,7 @@ spec:
                 name: omnixo-frontend
                 port:
                   number: 80
-          - path: /api
+          - path: /move
             pathType: Prefix
             backend:
               service:
