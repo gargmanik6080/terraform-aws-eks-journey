@@ -6,25 +6,18 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
-    # alb.ingress.kubernetes.io/actions.api: |
-      # {
-      #   "Type": "forward",
-      #   "ForwardConfig": {
-      #     "TargetGroups": [
-      #       {
-      #         "ServiceName": "omnixo-server",
-      #         "ServicePort": "3030"
-      #       }
-      #     ]
-      #   },
-      #   "Conditions": [
-      #     {
-      #       "Field": "path-pattern",
-      #       "Values": ["/api/*"]
-      #     }
-      #   ]
-      #   # "RewritePath": "/"
-      # }
+    alb.ingress.kubernetes.io/actions.backend-service: |
+      {
+        "Type": "forward",
+        "ForwardConfig": {
+          "TargetGroups": [
+            {
+              "ServiceName": "omnixo-server",
+              "ServicePort": "3030"
+            }
+          ]
+        }
+      }
 
 spec:
   ingressClassName: alb
@@ -38,11 +31,17 @@ spec:
                 name: omnixo-frontend
                 port:
                   number: 80
-          - path: /move
-            pathType: Prefix
+          - path: /api/move
+            pathType: Exact
             backend:
               service:
                 name: omnixo-server
                 port:
                   number: 3030
-
+          - path: /move
+            pathType: Exact
+            backend:
+              service:
+                name: omnixo-server
+                port:
+                  number: 3030

@@ -55,15 +55,37 @@ kubectl apply -f svc-frontend.yaml
 kubectl apply -f svc-backend.yaml
 ```
 
-### Step 3: Set up IAM OIDC Provider
+### Step 3: Set up IAM for Load Balancer Controller
 
-Associate IAM OIDC provider with your cluster:
+The setup script (`setup-new.sh`) uses a **direct IAM policy attachment** approach instead of the complex OIDC provider setup. This avoids common connectivity issues with OIDC endpoints.
+
+#### How It Works
+
+1. **Find Worker Node**: Gets the IP of the first worker node
+2. **Get Instance Profile**: Uses EC2 API to find the IAM instance profile
+3. **Extract Role Name**: Gets the IAM role name from the instance profile
+4. **Attach Policy**: Directly attaches the custom ALB policy to the worker node role
 
 ```bash
-eksctl utils associate-iam-oidc-provider \
-  --region us-west-2 \
-  --cluster my-test-cluster \
-  --approve
+# 1. Get worker node IP
+WORKER_NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+
+# 2. Find instance profile
+INSTANCE_PROFILE_ARN=$(aws ec2 describe-instances \
+  --filters "Name=private-ip-address,Values=$WORKER_NODE_IP" \
+  --query "Reservations[].Instances[].IamInstanceProfile.Arn" \
+  --output text)
+
+# 3. Get role name from instance profile
+WORKER_ROLE_NAME=$(aws iam get-instance-profile \
+  --instance-profile-name $INSTANCE_PROFILE_NAME \
+  --query "InstanceProfile.Roles[0].RoleName" \
+  --output text)
+
+# 4. Attach policy to role
+aws iam attach-role-policy \
+  --role-name $WORKER_ROLE_NAME \
+  --policy-arn $POLICY_ARN
 ```
 
 ### Step 4: Create IAM Policy
@@ -76,22 +98,22 @@ aws iam create-policy \
     --policy-document file://iam-policy.json
 ```
 
-### Step 5: Create Service Account with IAM Role
+#### Enhanced IAM Policy Features
 
-```bash
-eksctl create iamserviceaccount \
-    --cluster=my-test-cluster \
-    --namespace=kube-system \
-    --name=aws-load-balancer-controller \
-    --attach-policy-arn=arn:aws:iam::YOUR-ACCOUNT-ID:policy/AWSLoadBalancerControllerIAMPolicy \
-    --override-existing-serviceaccounts \
-    --region us-west-2 \
-    --approve
-```
+The comprehensive IAM policy includes:
 
-> **Note**: Replace `YOUR-ACCOUNT-ID` with your actual AWS Account ID
+- **60+ describe permissions** across EC2, ELB, Route53, EKS services
+- **Fixed `elasticloadbalancing:AddTags` permission issues**
+- **Fixed `elasticloadbalancing:DescribeListenerAttributes` permission issues**
+- **Comprehensive permissions for**:
+  - Application Load Balancer management
+  - VPC and subnet operations
+  - Security group management
+  - EC2 instance operations
+  - Route53 (for DNS)
+  - WAF and Shield (for security)
 
-### Step 6: Install AWS Load Balancer Controller
+### Step 5: Install AWS Load Balancer Controller
 
 Add the EKS Helm repository and install the controller:
 
@@ -106,7 +128,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
   --set serviceAccount.name=aws-load-balancer-controller
 ```
 
-### Step 7: Verify Controller Installation
+### Step 6: Verify Controller Installation
 
 Check if the controller is running:
 
@@ -115,7 +137,7 @@ kubectl get deployment -n kube-system aws-load-balancer-controller
 kubectl logs -n kube-system deployment/aws-load-balancer-controller
 ```
 
-### Step 8: Deploy Ingress
+### Step 7: Deploy Ingress
 
 Apply the ingress configuration:
 
@@ -123,7 +145,7 @@ Apply the ingress configuration:
 kubectl apply -f frontend-ingress.yaml
 ```
 
-### Step 9: Verify ALB Creation
+### Step 8: Verify ALB Creation
 
 Check ingress status:
 
@@ -151,10 +173,16 @@ Ingress configuration with:
 - **Target Type**: `ip` for direct pod targeting
 - **Routing Rules**: 
   - `/` → frontend service (port 80)
-  - `/move/*` → backend API service (port 3030)
-
-### `setup.sh`
-Automated setup script with commands for the entire deployment process.
+  - `/move` and `/api/move` → backend API service (port 3030)
+  
+### `setup-new.sh`
+Automated setup script with commands for the entire deployment process including:
+- Cluster creation
+- Application deployment
+- IAM policy creation and attachment
+- ALB controller installation
+- Ingress deployment
+- Testing and validation
 
 ## 🧪 Testing the Deployment
 
@@ -173,11 +201,33 @@ curl http://$ALB_DNS
 
 ### 3. Test Backend API Access
 
+The backend API only accepts POST requests with JSON data:
+
 ```bash
-curl http://$ALB_DNS/move/test
+# This will return 405 Method Not Allowed (expected behavior)
+curl http://$ALB_DNS/move
+
+# Correct way to test the API
+curl -X POST http://$ALB_DNS/move \
+  -H "Content-Type: application/json" \
+  -d '{
+    "board": [null, null, null, null, "X", null, null, null, null],
+    "player": "O"
+  }'
 ```
 
-### 4. Browser Testing
+Expected response:
+```json
+{"newBoard":["O",null,null,null,"X",null,null,null,null],"winner":"None"}
+```
+
+### 4. API Path Configuration
+
+- Frontend serves at: `/` (main page) and `/board` (game interface)
+- Backend API at: `/move` and `/api/move` (accepts POST with game state)
+- Frontend at `/board` calls backend at `/api/move` for game logic
+
+### 5. Browser Testing
 
 Open your browser and navigate to the ALB DNS name to access the application.
 
@@ -232,6 +282,16 @@ Open your browser and navigate to the ALB DNS name to access the application.
 2. Verify security groups allow ALB → Pod traffic
 
 3. Check target group in AWS Console
+
+### IAM Permission Issues
+
+#### Problem 1: Missing `elasticloadbalancing:AddTags` Permission
+- **Error**: `User is not authorized to perform: elasticloadbalancing:AddTags`
+- **Solution**: Enhanced IAM policy with comprehensive tagging permissions
+
+#### Problem 2: Missing `elasticloadbalancing:DescribeListenerAttributes` Permission  
+- **Error**: `User is not authorized to perform: elasticloadbalancing:DescribeListenerAttributes`
+- **Solution**: Added comprehensive describe permissions for all ELB operations
 
 ## 💡 ALB vs NodePort Comparison
 
@@ -292,9 +352,38 @@ aws iam delete-policy --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/AWSLoadBa
 
 - **Application Load Balancer**: ~$22.50/month + data processing charges
 - **EKS Cluster**: $0.10/hour (~$73/month)
-- **EC2 Instances**: 5 × m3.medium (~$185/month)
+- **EC2 Instances**: 5 × t3.medium (~$185/month)
 - **Data Transfer**: Variable based on usage
 
 **Estimated Monthly Cost**: ~$280-300
 
 Always clean up resources after learning to avoid unexpected charges!
+
+## 🎉 Final Status - Success!
+
+The deployment is fully functional with:
+
+| Component | Status | Test Result |
+|-----------|--------|-------------|
+| **Frontend** | ✅ Working | Returns HTML page correctly |
+| **Backend API** | ✅ Working | Returns JSON response correctly |
+| **ALB Routing** | ✅ Working | Routes `/` to frontend, `/move` to backend |
+| **Method Handling** | ✅ Working | GET/POST routed correctly |
+| **IAM Permissions** | ✅ Working | All required permissions in place |
+
+### 📝 Key Learnings
+1. **Method-specific routing**: API endpoints can be method-specific (POST only)
+2. **Path precedence**: Order matters in ingress path rules
+3. **Service discovery**: Internal vs external routing considerations
+4. **IAM permissions**: Comprehensive permissions prevent deployment issues
+5. **Testing strategy**: Different endpoints require different test approaches
+
+## 🔄 Migration to IRSA (Optional)
+
+For production environments, you can later migrate to IAM Roles for Service Accounts:
+1. Set up OIDC provider
+2. Create service account with IAM role annotation
+3. Remove policy from worker node role
+4. Update ALB controller to use new service account
+
+This simplified approach gets you up and running quickly while maintaining the option to enhance security later.

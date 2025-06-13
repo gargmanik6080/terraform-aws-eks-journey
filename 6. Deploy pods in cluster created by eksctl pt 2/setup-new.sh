@@ -57,7 +57,6 @@ check_command "aws"
 ACCOUNT_ID=$(get_account_id)
 log_info "Using AWS Account ID: $ACCOUNT_ID"
 
-: '
 # Step 1: Create EKS Cluster
 log_info "Creating EKS cluster: $CLUSTER_NAME"
 eksctl create cluster \
@@ -89,7 +88,7 @@ else
     log_error "Failed to deploy applications"
     exit 1
 fi
-'
+
 
 # Step 3: Wait for cluster to be fully ready
 log_info "Waiting for cluster to be fully ready..."
@@ -278,22 +277,6 @@ else
     exit 1
 fi
 
-# Step 9.1: Force reconciliation and restart controller to pick up new permissions
-log_info "Forcing ingress reconciliation to apply updated IAM permissions..."
-kubectl annotate ingress frontend-ingress alb.ingress.kubernetes.io/force-reconcile="$(date)" --overwrite
-
-log_info "Restarting AWS Load Balancer Controller to ensure it picks up new IAM permissions..."
-kubectl rollout restart deployment/aws-load-balancer-controller -n kube-system
-
-log_info "Waiting for controller to restart..."
-kubectl rollout status deployment/aws-load-balancer-controller -n kube-system --timeout=120s
-
-if [ $? -eq 0 ]; then
-    log_success "Controller restarted successfully"
-else
-    log_warning "Controller restart may have taken longer than expected, but continuing..."
-fi
-
 # Step 10: Wait for ALB to be provisioned and get its DNS name
 log_info "Waiting for ALB to be provisioned (this may take 3-5 minutes)..."
 log_info "You can check ALB creation progress in AWS Console > EC2 > Load Balancers"
@@ -349,11 +332,11 @@ echo ""
 echo "=== Next Steps ==="
 if [ ! -z "$ALB_DNS" ]; then
     echo "✅ Frontend: http://$ALB_DNS"
-    echo "✅ Backend API: http://$ALB_DNS/move/test"
+    echo "✅ Backend API: http://$ALB_DNS/move (POST requests only)"
     echo ""
     echo "Test commands:"
     echo "  curl http://$ALB_DNS"
-    echo "  curl http://$ALB_DNS/move/test"
+    echo "  curl -X POST http://$ALB_DNS/move -H \"Content-Type: application/json\" -d '{\"board\":[null,null,null,null,\"X\",null,null,null,null],\"player\":\"O\"}'"
 else
     echo "Get ALB DNS with: kubectl get ingress frontend-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
 fi
@@ -366,7 +349,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     log_info "Creating curl pod for testing..."
     echo "Commands to try inside the curl pod:"
     echo "  curl omnixo-frontend.default.svc.cluster.local"
-    echo "  curl omnixo-server.default.svc.cluster.local:3030/move/test"
+    echo "  curl -X POST omnixo-server.default.svc.cluster.local:3030/move -H \"Content-Type: application/json\" -d '{\"board\":[null,null,null,null,\"X\",null,null,null,null],\"player\":\"O\"}'"
     kubectl run curlpod --image=curlimages/curl:latest --rm -it --restart=Never -- /bin/sh
 fi
 
@@ -375,9 +358,8 @@ echo ""
 echo "=== Troubleshooting Tips ==="
 echo "If ALB fails to create:"
 echo "1. Check IAM permissions: kubectl describe ingress frontend-ingress"
-echo "2. Force reconciliation: kubectl annotate ingress frontend-ingress alb.ingress.kubernetes.io/force-reconcile=\"\$(date)\" --overwrite"
-echo "3. Restart controller: kubectl rollout restart deployment/aws-load-balancer-controller -n kube-system"
-echo "4. Check controller logs: kubectl logs -n kube-system deployment/aws-load-balancer-controller"
+echo "2. Check controller logs: kubectl logs -n kube-system deployment/aws-load-balancer-controller"
+echo "3. If needed, force reconciliation manually: kubectl annotate ingress frontend-ingress alb.ingress.kubernetes.io/force-reconcile=\"\$(date)\" --overwrite"
 echo ""
 echo "Common IAM issues resolved by this script:"
 echo "✅ elasticloadbalancing:AddTags permission"
