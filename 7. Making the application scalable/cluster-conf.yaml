@@ -1,0 +1,24 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: my-test-cluster
+  region: us-west-2
+
+availabilityZones: ["us-west-2a", "us-west-2b", "us-west-2c"]
+
+nodeGroups:
+  - name: ng-1
+    instanceType: t3.small
+    desiredCapacity: 5
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        albIngress: true
+        ebs: true
+        efs: true
+        cloudWatch: true
+
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["*"]

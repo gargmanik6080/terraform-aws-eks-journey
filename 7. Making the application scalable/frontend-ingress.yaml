@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/actions.backend-service: |
+      {
+        "Type": "forward",
+        "ForwardConfig": {
+          "TargetGroups": [
+            {
+              "ServiceName": "omnixo-server",
+              "ServicePort": "3030"
+            }
+          ]
+        }
+      }
+
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: omnixo-frontend
+                port:
+                  number: 80
+          - path: /api/move
+            pathType: Exact
+            backend:
+              service:
+                name: omnixo-server
+                port:
+                  number: 3030
+          - path: /move
+            pathType: Exact
+            backend:
+              service:
+                name: omnixo-server
+                port:
+                  number: 3030
