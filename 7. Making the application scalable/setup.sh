@@ -277,12 +277,12 @@ log_info "Waiting for ALB to be provisioned (this may take 3-5 minutes)..."
 log_info "You can check ALB creation progress in AWS Console > EC2 > Load Balancers"
 
 ALB_DNS=""
-for i in {1..20}; do
+for i in {1..25}; do
     ALB_DNS=$(kubectl get ingress frontend-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
     if [ ! -z "$ALB_DNS" ]; then
         break
     fi
-    log_info "Waiting for ALB... (attempt $i/20)"
+    log_info "Waiting for ALB... (attempt $i/25)"
     sleep 15
 done
 

@@ -4,13 +4,32 @@ kind: ClusterConfig
 metadata:
   name: my-test-cluster
   region: us-west-2
+  version: "1.33"
+  tags:
+    Environment: Test
+    Owner: Manik Garg
 
-availabilityZones: ["us-west-2a", "us-west-2b", "us-west-2c"]
+# vpc:
+#   cidr: "10.0.0.0/16"
+#   nat:
+#     gateway: single
+#   subnets:
+#     private:
+#       us-west-2a:
+#         cidr: "10.0.1.0/24"
+#       us-west-2b:
+#         cidr: "10.0.2.0/24"
+#     public:
+#       us-west-2a:
+#         cidr: "10.0.3.0/24"
+#       us-west-2b:
+#         cidr: "10.0.4.0/24"
 
 nodeGroups:
   - name: ng-1
     instanceType: t3.small
     desiredCapacity: 5
+    amiFamily: Bottlerocket
     iam:
       withAddonPolicies:
         autoScaler: true
